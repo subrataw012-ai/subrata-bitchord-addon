@@ -1,43 +1,39 @@
 const http = require("http");
-const https = require("https");
 
 const PORT = process.env.PORT || 3000;
 
 const MANIFEST = {
-  id: "subrata.radioparadise",
-  name: "Radio Paradise",
-  version: "1.0.0",
+  id: "subrata.radioparadise.lossless",
+  name: "Radio Paradise Lossless",
+  version: "1.1.0",
   resources: ["search", "stream"]
 };
 
+// আসল FLAC (Lossless) স্ট্রিমিং লিংক
 const STATIONS = {
-  "main-128": {
-    title: "Radio Paradise - Main Mix",
-    url: "http://stream-dc1.radioparadise.com/mp3-128",
-    format: "mp3",
-    quality: "HIGH",
-    bitrate: 128000
+  "main-flac": {
+    title: "Radio Paradise - Main Mix (FLAC)",
+    url: "http://stream.radioparadise.com/flac",
+    format: "flac",
+    quality: "LOSSLESS"
   },
-  "main-192": {
-    title: "Radio Paradise - Main Mix 192k",
-    url: "http://stream-dc1.radioparadise.com/mp3-192",
-    format: "mp3",
-    quality: "HIGH",
-    bitrate: 192000
+  "mellow-flac": {
+    title: "Radio Paradise - Mellow Mix (FLAC)",
+    url: "http://stream.radioparadise.com/mellow-flac",
+    format: "flac",
+    quality: "LOSSLESS"
   },
-  "main-aac-128": {
-    title: "Radio Paradise - Main Mix AAC",
-    url: "http://stream-dc1.radioparadise.com/aac-128",
-    format: "aac",
-    quality: "HIGH",
-    bitrate: 128000
+  "rock-flac": {
+    title: "Radio Paradise - Rock Mix (FLAC)",
+    url: "http://stream.radioparadise.com/rock-flac",
+    format: "flac",
+    quality: "LOSSLESS"
   },
-  "main-aac-320": {
-    title: "Radio Paradise - Main Mix AAC 320k",
-    url: "http://stream-dc1.radioparadise.com/aac-320",
-    format: "aac",
-    quality: "HIGH",
-    bitrate: 320000
+  "world-flac": {
+    title: "Radio Paradise - World Mix (FLAC)",
+    url: "http://stream.radioparadise.com/world-flac",
+    format: "flac",
+    quality: "LOSSLESS"
   }
 };
 
@@ -56,19 +52,19 @@ function searchTracks(query) {
   return Object.entries(STATIONS)
     .filter(([id, station]) => {
       if (!q) return true;
-
       return (
         id.toLowerCase().includes(q) ||
         station.title.toLowerCase().includes(q) ||
         "radio paradise".includes(q) ||
-        "main mix".includes(q)
+        "lossless".includes(q) ||
+        "flac".includes(q)
       );
     })
     .map(([id, station]) => ({
       id,
       title: station.title,
       artist: "Radio Paradise",
-      album: "Internet Radio",
+      album: "Hi-Res Internet Radio",
       duration: 0,
       format: station.format,
       audioQuality: station.quality
@@ -78,6 +74,13 @@ function searchTracks(query) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
+  // মূল লিংকে গেলে যেন আর 404 না দেখায়, তার জন্য একটি ওয়েলকাম মেসেজ
+  if (url.pathname === "/") {
+    return json(res, { 
+      message: "Welcome to Subrata's Lossless BitChord Addon! Use /manifest.json to install in BitChord." 
+    });
+  }
+
   // Manifest
   if (url.pathname === "/manifest.json") {
     return json(res, MANIFEST);
@@ -86,28 +89,16 @@ const server = http.createServer((req, res) => {
   // Search
   if (url.pathname === "/search") {
     const query = url.searchParams.get("q") || "";
-
-    return json(res, {
-      tracks: searchTracks(query)
-    });
+    return json(res, { tracks: searchTracks(query) });
   }
 
   // Stream
   if (url.pathname.startsWith("/stream/")) {
-    const id = decodeURIComponent(
-      url.pathname.substring("/stream/".length)
-    );
-
+    const id = decodeURIComponent(url.pathname.substring("/stream/".length));
     const station = STATIONS[id];
 
     if (!station) {
-      return json(
-        res,
-        {
-          error: "Station not found"
-        },
-        404
-      );
+      return json(res, { error: "Station not found" }, 404);
     }
 
     return json(res, {
@@ -117,20 +108,14 @@ const server = http.createServer((req, res) => {
       codec: station.format,
       container: station.format,
       manifest: "none",
-      encrypted: false,
-      bitrate: station.bitrate
+      encrypted: false
     });
   }
 
-  return json(
-    res,
-    {
-      error: "Not found"
-    },
-    404
-  );
+  return json(res, { error: "Not found" }, 404);
 });
 
 server.listen(PORT, () => {
-  console.log(`Radio Paradise BitChord addon running on port ${PORT}`);
+  console.log(`Radio Paradise Lossless Addon running on port ${PORT}`);
 });
+    
