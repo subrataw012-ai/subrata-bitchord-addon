@@ -1,0 +1,6 @@
+{
+  "id": "subrata.bitchord.addon",
+  "name": "Subrata Music",
+  "version": "1.0.0",
+  "resources": ["search", "stream"]
+}
