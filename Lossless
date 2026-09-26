@@ -1,0 +1,120 @@
+const http = require("http");
+
+const PORT = process.env.PORT || 3000;
+
+const MANIFEST = {
+  id: "subrata.radioparadise.lossless",
+  name: "Radio Paradise Lossless",
+  version: "1.1.0",
+  resources: ["search", "stream"]
+};
+
+// আসল FLAC (Lossless) স্ট্রিমিং লিংক
+const STATIONS = {
+  "main-flac": {
+    title: "Radio Paradise - Main Mix (FLAC)",
+    url: "http://stream.radioparadise.com/flac",
+    format: "flac",
+    quality: "LOSSLESS"
+  },
+  "mellow-flac": {
+    title: "Radio Paradise - Mellow Mix (FLAC)",
+    url: "http://stream.radioparadise.com/mellow-flac",
+    format: "flac",
+    quality: "LOSSLESS"
+  },
+  "rock-flac": {
+    title: "Radio Paradise - Rock Mix (FLAC)",
+    url: "http://stream.radioparadise.com/rock-flac",
+    format: "flac",
+    quality: "LOSSLESS"
+  },
+  "world-flac": {
+    title: "Radio Paradise - World Mix (FLAC)",
+    url: "http://stream.radioparadise.com/world-flac",
+    format: "flac",
+    quality: "LOSSLESS"
+  }
+};
+
+function json(res, data, status = 200) {
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*"
+  });
+  res.end(JSON.stringify(data));
+}
+
+function searchTracks(query) {
+  const q = query.toLowerCase().trim();
+
+  return Object.entries(STATIONS)
+    .filter(([id, station]) => {
+      if (!q) return true;
+      return (
+        id.toLowerCase().includes(q) ||
+        station.title.toLowerCase().includes(q) ||
+        "radio paradise".includes(q) ||
+        "lossless".includes(q) ||
+        "flac".includes(q)
+      );
+    })
+    .map(([id, station]) => ({
+      id,
+      title: station.title,
+      artist: "Radio Paradise",
+      album: "Hi-Res Internet Radio",
+      duration: 0,
+      format: station.format,
+      audioQuality: station.quality
+    }));
+}
+
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+
+  // মূল লিংকে গেলে যেন আর 404 না দেখায়, তার জন্য একটি ওয়েলকাম মেসেজ
+  if (url.pathname === "/") {
+    return json(res, { 
+      message: "Welcome to Subrata's Lossless BitChord Addon! Use /manifest.json to install in BitChord." 
+    });
+  }
+
+  // Manifest
+  if (url.pathname === "/manifest.json") {
+    return json(res, MANIFEST);
+  }
+
+  // Search
+  if (url.pathname === "/search") {
+    const query = url.searchParams.get("q") || "";
+    return json(res, { tracks: searchTracks(query) });
+  }
+
+  // Stream
+  if (url.pathname.startsWith("/stream/")) {
+    const id = decodeURIComponent(url.pathname.substring("/stream/".length));
+    const station = STATIONS[id];
+
+    if (!station) {
+      return json(res, { error: "Station not found" }, 404);
+    }
+
+    return json(res, {
+      url: station.url,
+      format: station.format,
+      quality: station.quality,
+      codec: station.format,
+      container: station.format,
+      manifest: "none",
+      encrypted: false
+    });
+  }
+
+  return json(res, { error: "Not found" }, 404);
+});
+
+server.listen(PORT, () => {
+  console.log(`Radio Paradise Lossless Addon running on port ${PORT}`);
+});
